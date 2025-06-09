@@ -106,16 +106,46 @@
     .modal-footer button {
       min-width: 80px;
     }
+    .filter-section {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .filter-section select {
+      width: 200px;
+    }
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      margin: 10px 0;
+    }
+    .schedule-cell {
+      border: 1px solid #ddd;
+      padding: 5px;
+      text-align: center;
+    }
+    .schedule-cell input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .schedule-header {
+      font-weight: bold;
+      background-color: #f0f4f8;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>医生管理</h2>
 
-    <label for="filterDepartment">筛选科室</label>
-    <select id="filterDepartment">
-      <option value="">全部科室</option>
-    </select>
+    <div class="filter-section">
+      <label for="filterDepartment">筛选科室</label>
+      <select id="filterDepartment">
+        <option value="">全部科室</option>
+      </select>
+      <button id="btnExport" style="margin-left: 10px;">导出医生信息</button>
+    </div>
 
     <button id="btnAddDoctor" style="margin-top: 15px;">新增医生</button>
 
@@ -127,6 +157,7 @@
           <th>职称</th>
           <th>科室</th>
           <th>剩余挂号数</th>
+          <th>工作时间</th>
           <th>简介</th>
           <th>操作</th>
         </tr>
@@ -142,16 +173,22 @@
     <div class="modal-content">
       <h3 id="modalTitle">新增医生</h3>
       <label for="modalDoctorId">医生ID</label>
-      <input type="text" id="modalDoctorId" placeholder="唯一ID" />
+      <input type="text" id="modalDoctorId" placeholder="系统自动生成" disabled />
 
       <label for="modalName">姓名</label>
-      <input type="text" id="modalName" />
+      <input type="text" id="modalName" placeholder="请输入医生姓名" />
 
       <label for="modalTitleInput">职称</label>
-      <input type="text" id="modalTitleInput" placeholder="例如 主任医师" />
+      <select id="modalTitleInput">
+        <option value="主任医师">主任医师</option>
+        <option value="主治医师">主治医师</option>
+      </select>
 
       <label for="modalDepartment">科室</label>
       <select id="modalDepartment"></select>
+
+      <label for="modalWorkTime">工作时间</label>
+      <input type="text" id="modalWorkTime" placeholder="例如：周一至周五 8:00-17:00" />
 
       <label for="modalRemain">剩余挂号数</label>
       <input type="number" id="modalRemain" min="0" value="30" />
@@ -166,6 +203,20 @@
     </div>
   </div>
 
+  <!-- 排班管理弹窗 -->
+  <div id="scheduleModal" class="modal">
+    <div class="modal-content">
+      <h3>排班管理</h3>
+      <div id="scheduleContent">
+        <!-- 排班内容动态生成 -->
+      </div>
+      <div class="modal-footer">
+        <button id="scheduleCancelBtn">取消</button>
+        <button id="scheduleSaveBtn">保存</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       const api = window.api;
@@ -173,82 +224,100 @@
       let departments = [];
       let doctors = [];
       let editingDoctor = null;
+      let editingScheduleDoctor = null;
 
       async function loadDepartments() {
-        departments = await api.getDepartments?.() || [];
-        const filterSelect = document.getElementById('filterDepartment');
-        const modalDeptSelect = document.getElementById('modalDepartment');
+        try {
+          console.log('开始加载科室列表...');
+          const departmentList = [
+            "普通外科", "骨科", "神经外科", "心胸外科", "泌尿外科",
+            "肝胆外科", "肛肠外科", "烧伤科", "妇科", "产科",
+            "儿科", "新生儿科", "眼科", "耳鼻喉科", "口腔科",
+            "皮肤科", "风湿免疫科", "急诊科"
+          ];
+          
+          departments = departmentList.map(name => ({
+            departmentId: name,
+            name
+          }));
+          console.log('科室列表加载完成:', departments);
 
-        filterSelect.innerHTML = '<option value="">全部科室</option>';
-        modalDeptSelect.innerHTML = '';
+          const filterSelect = document.getElementById('filterDepartment');
+          const modalDeptSelect = document.getElementById('modalDepartment');
 
-        departments.forEach(dep => {
-          const option1 = document.createElement('option');
-          option1.value = dep.departmentId;
-          option1.textContent = dep.name;
-          filterSelect.appendChild(option1);
+          filterSelect.innerHTML = '<option value="">全部科室</option>';
+          modalDeptSelect.innerHTML = '';
 
-          const option2 = document.createElement('option');
-          option2.value = dep.departmentId;
-          option2.textContent = dep.name;
-          modalDeptSelect.appendChild(option2);
-        });
-      }
+          departments.forEach(dep => {
+            const option1 = document.createElement('option');
+            option1.value = dep.departmentId;
+            option1.textContent = dep.name;
+            filterSelect.appendChild(option1);
 
-      async function loadDoctors(filterDeptId = '') {
-        doctors = await api.getDoctors?.() || [];
-        if (filterDeptId) {
-          doctors = doctors.filter(doc => doc.departmentId === filterDeptId);
+            const option2 = document.createElement('option');
+            option2.value = dep.departmentId;
+            option2.textContent = dep.name;
+            modalDeptSelect.appendChild(option2);
+          });
+        } catch (error) {
+          console.error('加载科室列表失败:', error);
+          alert('加载科室列表失败：' + (error.message || '未知错误'));
         }
-        renderDoctorsTable();
       }
 
-      function renderDoctorsTable() {
+      async function loadDoctors() {
+        try {
+          console.log('开始加载医生数据...');
+          const doctors = await window.electronAPI.getDoctors();
+          console.log('获取到的医生数据:', doctors);
+          
+          if (!Array.isArray(doctors)) {
+            console.error('医生数据格式错误:', doctors);
+            return;
+          }
+          
+          // 根据选择的科室筛选
+          const selectedDept = document.getElementById('filterDepartment').value;
+          const filteredDoctors = selectedDept === 'all' 
+            ? doctors 
+            : doctors.filter(doc => doc.departmentId === selectedDept);
+          
+          console.log('筛选后的医生数据:', filteredDoctors);
+          renderDoctorsTable(filteredDoctors);
+        } catch (error) {
+          console.error('加载医生数据失败:', error);
+          alert('加载医生数据失败: ' + error.message);
+        }
+      }
+
+      function renderDoctorsTable(doctors) {
         const tbody = document.querySelector('#doctorTable tbody');
         tbody.innerHTML = '';
-
-        if (doctors.length === 0) {
+        
+        if (!Array.isArray(doctors) || doctors.length === 0) {
+          console.log('没有医生数据或数据格式不正确');
           const tr = document.createElement('tr');
-          const td = document.createElement('td');
-          td.colSpan = 7;
-          td.style.textAlign = 'center';
-          td.textContent = '暂无医生数据';
-          tr.appendChild(td);
+          tr.innerHTML = '<td colspan="7" class="text-center">暂无数据</td>';
           tbody.appendChild(tr);
           return;
         }
-
-        doctors.forEach(doc => {
+        
+        doctors.forEach(doctor => {
+          console.log('处理医生数据:', doctor);
           const tr = document.createElement('tr');
-
           tr.innerHTML = `
-            <td>${doc.doctorId}</td>
-            <td>${doc.name}</td>
-            <td>${doc.title}</td>
-            <td>${getDepartmentName(doc.departmentId)}</td>
-            <td>${doc.remain}</td>
-            <td>${doc.bio || ''}</td>
-            <td class="actions">
-              <button class="editBtn" data-id="${doc.doctorId}">编辑</button>
-              <button class="delete deleteBtn" data-id="${doc.doctorId}">删除</button>
+            <td>${doctor.doctorId || ''}</td>
+            <td>${doctor.name || ''}</td>
+            <td>${doctor.title || ''}</td>
+            <td>${doctor.Department ? doctor.Department.name : ''}</td>
+            <td>${doctor.workTime || ''}</td>
+            <td>${doctor.remain !== undefined ? doctor.remain : ''}</td>
+            <td>
+              <button class="btn btn-sm btn-primary" onclick="editDoctor('${doctor.doctorId}')">编辑</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteDoctor('${doctor.doctorId}')">删除</button>
             </td>
           `;
           tbody.appendChild(tr);
-        });
-
-        document.querySelectorAll('.editBtn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-id');
-            openEditModal(id);
-          });
-        });
-        document.querySelectorAll('.deleteBtn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-id');
-            if (confirm('确定删除该医生吗？')) {
-              deleteDoctor(id);
-            }
-          });
         });
       }
 
@@ -276,46 +345,83 @@
           document.getElementById('modalName').value = editingDoctor.name;
           document.getElementById('modalTitleInput').value = editingDoctor.title;
           document.getElementById('modalDepartment').value = editingDoctor.departmentId;
+          document.getElementById('modalWorkTime').value = editingDoctor.workTime || '周一至周五 8:00-17:00';
           document.getElementById('modalRemain').value = editingDoctor.remain;
           document.getElementById('modalBio').value = editingDoctor.bio || '';
         } else {
           document.getElementById('modalTitle').textContent = '新增医生';
-          document.getElementById('modalDoctorId').value = '';
-          document.getElementById('modalDoctorId').disabled = false;
+          document.getElementById('modalDoctorId').value = '系统自动生成';
+          document.getElementById('modalDoctorId').disabled = true;
           document.getElementById('modalName').value = '';
           document.getElementById('modalTitleInput').value = '';
           document.getElementById('modalDepartment').value = '';
+          document.getElementById('modalWorkTime').value = '周一至周五 8:00-17:00';
           document.getElementById('modalRemain').value = 30;
           document.getElementById('modalBio').value = '';
         }
       }
 
       async function saveDoctor() {
-        const id = document.getElementById('modalDoctorId').value.trim();
-        const name = document.getElementById('modalName').value.trim();
-        const title = document.getElementById('modalTitleInput').value.trim();
-        const departmentId = document.getElementById('modalDepartment').value;
-        const remain = parseInt(document.getElementById('modalRemain').value);
-        const bio = document.getElementById('modalBio').value.trim();
+        try {
+          const id = document.getElementById('modalDoctorId').value.trim();
+          const name = document.getElementById('modalName').value.trim();
+          const title = document.getElementById('modalTitleInput').value.trim();
+          const departmentId = document.getElementById('modalDepartment').value;
+          const workTime = document.getElementById('modalWorkTime').value.trim();
+          const remain = parseInt(document.getElementById('modalRemain').value);
+          const bio = document.getElementById('modalBio').value.trim();
 
-        if (!id || !name || !title || !departmentId || isNaN(remain)) {
-          alert('请完整填写医生信息');
-          return;
-        }
+          // 验证医生信息
+          if (!name) {
+            alert('请输入医生姓名');
+            return;
+          }
+          if (!title) {
+            alert('请选择医生职称');
+            return;
+          }
+          if (!departmentId) {
+            alert('请选择所属科室');
+            return;
+          }
+          if (isNaN(remain) || remain < 0) {
+            alert('请输入有效的剩余挂号数');
+            return;
+          }
 
-        const doctorData = { 
-          doctorId: id, name, title, departmentId, remain, bio 
-        };
+          // 生成医生ID（如果是在新增模式下）
+          let doctorId = id;
+          if (!editingDoctor) {
+            const dept = departments.find(d => d.departmentId === departmentId);
+            const deptPrefix = dept ? dept.name.charAt(0) : 'X';
+            const randomNum = Math.floor(1000 + Math.random() * 9000);
+            doctorId = `D${deptPrefix}${randomNum}`;
+          }
 
-        console.log('保存医生数据:', doctorData);
+          const doctorData = { 
+            doctorId,
+            name,
+            title,
+            departmentId,
+            workTime: workTime || '周一至周五 8:00-17:00',
+            remain,
+            bio,
+            schedule: editingDoctor ? editingDoctor.schedule : JSON.stringify({})
+          };
 
-        const success = await api.updateDoctor(doctorData);
-        if (success) {
-          alert('保存成功');
-          closeModal();
-          await loadDoctors(document.getElementById('filterDepartment').value);
-        } else {
-          alert('保存失败，请重试');
+          console.log('保存医生数据:', doctorData);
+
+          const success = await api.updateDoctor(doctorData);
+          if (success) {
+            alert('保存成功');
+            closeModal();
+            await loadDoctors();
+          } else {
+            alert('保存失败，请重试');
+          }
+        } catch (error) {
+          console.error('保存医生数据失败:', error);
+          alert('保存失败：' + (error.message || '未知错误'));
         }
       }
 
@@ -323,14 +429,116 @@
         const success = await api.deleteDoctor(id);
         if (success) {
           alert('删除成功');
-          await loadDoctors(document.getElementById('filterDepartment').value);
+          await loadDoctors();
         } else {
           alert('删除失败');
         }
       }
 
+      function openScheduleModal(doctorId) {
+        editingScheduleDoctor = doctors.find(d => d.doctorId === doctorId);
+        if (!editingScheduleDoctor) {
+          alert('找不到医生数据');
+          return;
+        }
+
+        const modal = document.getElementById('scheduleModal');
+        const content = document.getElementById('scheduleContent');
+        
+        // 生成排班表格
+        const schedule = JSON.parse(editingScheduleDoctor.schedule || '{}');
+        const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        
+        let html = '<div class="schedule-grid">';
+        // 表头
+        html += '<div class="schedule-cell schedule-header">时间</div>';
+        days.forEach(day => {
+          html += `<div class="schedule-cell schedule-header">${day}</div>`;
+        });
+        
+        // 上午
+        html += '<div class="schedule-cell">上午</div>';
+        days.forEach(day => {
+          const value = schedule[day]?.morning || '';
+          html += `<div class="schedule-cell"><input type="text" data-day="${day}" data-time="morning" value="${value}" placeholder="例如：8:00-12:00"></div>`;
+        });
+        
+        // 下午
+        html += '<div class="schedule-cell">下午</div>';
+        days.forEach(day => {
+          const value = schedule[day]?.afternoon || '';
+          html += `<div class="schedule-cell"><input type="text" data-day="${day}" data-time="afternoon" value="${value}" placeholder="例如：14:00-17:00"></div>`;
+        });
+        
+        html += '</div>';
+        content.innerHTML = html;
+        
+        modal.style.display = 'block';
+      }
+
+      async function saveSchedule() {
+        if (!editingScheduleDoctor) return;
+
+        const schedule = {};
+        const inputs = document.querySelectorAll('#scheduleContent input');
+        
+        inputs.forEach(input => {
+          const day = input.getAttribute('data-day');
+          const time = input.getAttribute('data-time');
+          const value = input.value.trim();
+          
+          if (!schedule[day]) {
+            schedule[day] = {};
+          }
+          schedule[day][time] = value;
+        });
+
+        try {
+          const success = await api.updateSchedule(editingScheduleDoctor.doctorId, JSON.stringify(schedule));
+          if (success) {
+            alert('排班保存成功');
+            closeScheduleModal();
+            await loadDoctors();
+          } else {
+            alert('排班保存失败');
+          }
+        } catch (error) {
+          console.error('保存排班失败:', error);
+          alert('保存失败：' + (error.message || '未知错误'));
+        }
+      }
+
       function closeModal() {
         document.getElementById('doctorModal').style.display = 'none';
+      }
+
+      function closeScheduleModal() {
+        document.getElementById('scheduleModal').style.display = 'none';
+        editingScheduleDoctor = null;
+      }
+
+      // 导出医生信息
+      async function exportDoctors() {
+        const filteredDoctors = doctors.map(doc => ({
+          '医生ID': doc.doctorId,
+          '姓名': doc.name,
+          '职称': doc.title,
+          '科室': getDepartmentName(doc.departmentId),
+          '剩余挂号数': doc.remain,
+          '工作时间': doc.workTime || '未设置',
+          '简介': doc.bio || ''
+        }));
+
+        const csvContent = [
+          Object.keys(filteredDoctors[0]).join(','),
+          ...filteredDoctors.map(doc => Object.values(doc).join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `医生信息_${new Date().toLocaleDateString()}.csv`;
+        link.click();
       }
 
       // 事件绑定
@@ -347,15 +555,31 @@
         saveDoctor();
       });
 
+      document.getElementById('scheduleCancelBtn').addEventListener('click', () => {
+        closeScheduleModal();
+      });
+
+      document.getElementById('scheduleSaveBtn').addEventListener('click', () => {
+        saveSchedule();
+      });
+
+      document.getElementById('btnExport').addEventListener('click', () => {
+        exportDoctors();
+      });
+
       document.getElementById('filterDepartment').addEventListener('change', async (e) => {
-        await loadDoctors(e.target.value);
+        await loadDoctors();
       });
 
       // 点击弹窗外区域关闭弹窗
       window.onclick = function(event) {
-        const modal = document.getElementById('doctorModal');
-        if (event.target === modal) {
+        const doctorModal = document.getElementById('doctorModal');
+        const scheduleModal = document.getElementById('scheduleModal');
+        if (event.target === doctorModal) {
           closeModal();
+        }
+        if (event.target === scheduleModal) {
+          closeScheduleModal();
         }
       };
 
