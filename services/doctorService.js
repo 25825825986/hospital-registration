@@ -5,6 +5,14 @@ async function getDoctors(departmentId = null) {
   try {
     console.log('获取医生列表, 科室:', departmentId);
     const where = departmentId ? { departmentId } : {};
+    
+    // 检查医生表是否为空
+    const count = await Doctor.count();
+    if (count === 0) {
+      console.log('医生表为空，返回空数组');
+      return [];
+    }
+    
     const doctors = await Doctor.findAll({
       where,
       include: [{
@@ -12,7 +20,27 @@ async function getDoctors(departmentId = null) {
         attributes: ['name']
       }]
     });
-    return doctors;
+    
+    // 格式化返回数据
+    const formattedDoctors = doctors.map(doc => {
+      const doctorData = doc.get({ plain: true });
+      return {
+        doctorId: doctorData.doctorId,
+        name: doctorData.name,
+        title: doctorData.title,
+        departmentId: doctorData.departmentId,
+        workTime: doctorData.workTime,
+        remain: doctorData.remain,
+        bio: doctorData.bio,
+        schedule: doctorData.schedule,
+        Department: doctorData.Department ? {
+          name: doctorData.Department.name
+        } : null
+      };
+    });
+    
+    console.log('获取到的医生数据:', JSON.stringify(formattedDoctors, null, 2));
+    return formattedDoctors;
   } catch (error) {
     console.error('获取医生列表失败:', error);
     throw error;
@@ -38,8 +66,14 @@ async function getDoctorById(doctorId) {
 async function createDoctor(doctorData) {
   try {
     console.log('创建医生:', doctorData);
-    // 生成医生ID: D + 科室首字母 + 4位随机数
+    
+    // 获取科室信息
     const department = await Department.findByPk(doctorData.departmentId);
+    if (!department) {
+      throw new Error('科室不存在');
+    }
+    
+    // 生成医生ID: D + 科室首字母 + 4位随机数
     const deptInitial = department.name.charAt(0);
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const doctorId = `D${deptInitial}${randomNum}`;

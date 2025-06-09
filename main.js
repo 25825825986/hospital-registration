@@ -64,7 +64,10 @@ app.whenReady().then(() => {
   ipcMain.handle('get-departments', async () => {
     try {
       console.log('开始获取科室列表...');
-      const departments = await Department.findAll();
+      const departments = await Department.findAll({
+        raw: true, // 返回纯数据对象
+        order: [['name', 'ASC']]
+      });
       console.log('获取到的科室数据:', JSON.stringify(departments, null, 2));
       return departments;
     } catch (error) {
