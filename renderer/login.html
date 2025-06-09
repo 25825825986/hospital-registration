@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -15,6 +16,7 @@
       align-items: center;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
+
     .login-box {
       background: #fff;
       padding: 40px;
@@ -22,12 +24,15 @@
       box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
       width: 360px;
     }
+
     h2 {
       text-align: center;
       margin-bottom: 24px;
       color: #333;
     }
-    input[type="text"], input[type="password"] {
+
+    input[type="text"],
+    input[type="password"] {
       width: 100%;
       padding: 12px;
       margin: 10px 0;
@@ -35,6 +40,7 @@
       border-radius: 6px;
       font-size: 14px;
     }
+
     button {
       width: 100%;
       padding: 12px;
@@ -45,9 +51,11 @@
       font-size: 16px;
       cursor: pointer;
     }
+
     button:hover {
       background-color: #357ab7;
     }
+
     .error {
       color: red;
       text-align: center;
@@ -56,12 +64,13 @@
     }
   </style>
 </head>
+
 <body>
   <div class="login-box">
     <h2>管理员登录</h2>
     <input type="text" id="adminId" placeholder="管理员ID" />
-    <input type="password" id="password" placeholder="密码" />
-    <button onclick="login()">登录</button>
+    <input id="password" type="password" placeholder="密码" />
+    <button id="loginBtn" onclick="login()">登录</button>
     <div class="error" id="error"></div>
   </div>
 
@@ -91,11 +100,12 @@
     }
 
     // 添加回车键登录支持
-    document.getElementById('password').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        login();
+    document.getElementById('password').addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        document.getElementById('loginBtn').click();
       }
     });
   </script>
 </body>
+
 </html>
