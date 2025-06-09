@@ -147,12 +147,14 @@ async function initDatabase() {
     await sequelize.authenticate();
     console.log('数据库连接成功');
     
-    // 同步所有模型到数据库，只在新建数据库时强制重建表
-    await sequelize.sync({ force: isNewDatabase });
+    // 同步所有模型到数据库
+    await sequelize.sync();
     console.log('数据库表同步完成');
     
-    // 只在新建数据库时初始化基础数据
-    if (isNewDatabase) {
+    // 检查科室表是否为空
+    const deptCount = await Department.count();
+    if (deptCount === 0) {
+      console.log('初始化科室数据...');
       // 初始化科室数据
       const departmentList = [
         "普通外科", "骨科", "神经外科", "心胸外科", "泌尿外科",
@@ -168,16 +170,21 @@ async function initDatabase() {
         });
       }
       console.log('科室数据初始化完成');
-      
+    }
+    
+    // 检查管理员表是否为空
+    const adminCount = await Admin.count();
+    if (adminCount === 0) {
+      console.log('初始化管理员账号...');
       // 初始化管理员账号
       await Admin.create({
         adminId: 'admin',
         password: 'admin123'
       });
       console.log('管理员账号初始化完成');
-      
-      console.log('数据库初始化完成');
     }
+    
+    console.log('数据库初始化完成');
   } catch (error) {
     console.error('数据库初始化失败:', error);
     throw error;

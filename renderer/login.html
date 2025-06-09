@@ -76,17 +76,26 @@
       }
 
       try {
-        const ok = await window.api.loginAdmin(id, pwd);
+        console.log('尝试登录:', id);
+        const ok = await window.electronAPI.loginAdmin(id, pwd);
+        console.log('登录结果:', ok);
         if (ok) {
           window.location.href = 'dashboard.html';
         } else {
           document.getElementById('error').textContent = '账号或密码错误';
         }
       } catch (e) {
+        console.error('登录失败:', e);
         document.getElementById('error').textContent = '登录失败，请稍后重试';
-        console.error(e);
       }
     }
+
+    // 添加回车键登录支持
+    document.getElementById('password').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        login();
+      }
+    });
   </script>
 </body>
 </html>
