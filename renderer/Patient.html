@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>挂号预约</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 20px;
+      background: #f5f7fa;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .filter-section {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .filter-section label {
+      margin-right: 10px;
+      font-weight: 500;
+    }
+
+    .filter-section select {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-width: 200px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+    }
+
+    tr:hover {
+      background-color: #f5f5f5;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.3s;
+    }
+
+    .btn-primary {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #0056b3;
+    }
+
+    .btn-secondary {
+      background-color: #6c757d;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #5a6268;
+    }
+    
+    .btn-secondary i {
+      font-size: 14px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+      background-color: white;
+      margin: 15% auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 50%;
+      max-width: 500px;
+    }
+
+    .modal-content h3 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    .modal-content label {
+      display: block;
+      margin: 10px 0 5px;
+      color: #555;
+    }
+
+    .modal-content input,
+    .modal-content select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    .modal-footer {
+      margin-top: 20px;
+      text-align: right;
+    }
+
+    .modal-footer button {
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2>挂号预约</h2>
+      <button onclick="window.location.href='dashboard.html'" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> 返回
+      </button>
+    </div>
+
+    <div class="filter-section">
+      <label for="filterDepartment">选择科室</label>
+      <select id="filterDepartment">
+        <option value="">请选择科室</option>
+      </select>
+    </div>
+
+    <table id="doctorTable">
+      <thead>
+        <tr>
+          <th>医生姓名</th>
+          <th>职称</th>
+          <th>科室</th>
+          <th>剩余挂号数</th>
+          <th>工作时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 医生列表动态生成 -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 挂号弹窗 -->
+  <div id="registrationModal" class="modal">
+    <div class="modal-content">
+      <h3>确认挂号</h3>
+      <div id="registrationInfo"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeRegistrationModal()">取消</button>
+        <button class="btn btn-primary" onclick="confirmRegistration()">确认挂号</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 页面加载完成后执行
+    document.addEventListener('DOMContentLoaded', () => {
+      loadDepartments();
+    });
+
+    // 加载科室列表
+    async function loadDepartments() {
+      try {
+        const departments = await window.electronAPI.getDepartments();
+        const select = document.getElementById('filterDepartment');
+        select.innerHTML = '<option value="">请选择科室</option>';
+        
+        departments.forEach(dept => {
+          const option = document.createElement('option');
+          option.value = dept.departmentId;
+          option.textContent = dept.name;
+          select.appendChild(option);
+        });
+
+        // 添加科室选择事件监听
+        select.addEventListener('change', loadDoctors);
+      } catch (error) {
+        console.error('加载科室失败:', error);
+        alert('加载科室失败，请刷新页面重试');
+      }
+    }
+
+    // 加载医生列表
+    async function loadDoctors() {
+      try {
+        const departmentId = document.getElementById('filterDepartment').value;
+        const doctors = await window.electronAPI.getDoctors(departmentId);
+        renderDoctorsTable(doctors);
+      } catch (error) {
+        console.error('加载医生失败:', error);
+        alert('加载医生失败，请重试');
+      }
+    }
+
+    // 渲染医生表格
+    function renderDoctorsTable(doctors) {
+      const tbody = document.querySelector('#doctorTable tbody');
+      tbody.innerHTML = '';
+
+      if (!doctors || doctors.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="6" style="text-align: center;">暂无医生信息</td>';
+        tbody.appendChild(tr);
+        return;
+      }
+
+      doctors.forEach(doctor => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${doctor.name}</td>
+          <td>${doctor.title}</td>
+          <td>${doctor.department ? doctor.department.name : '未知'}</td>
+          <td>${doctor.remain}</td>
+          <td>${doctor.workTime || '未设置'}</td>
+          <td>
+            <button class="btn btn-primary" onclick="showRegistrationModal('${doctor.doctorId}')">
+              挂号
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // 显示挂号弹窗
+    function showRegistrationModal(doctorId) {
+      const modal = document.getElementById('registrationModal');
+      const info = document.getElementById('registrationInfo');
+      
+      // 获取医生信息
+      const doctor = doctors.find(d => d.doctorId === doctorId);
+      if (doctor) {
+        info.innerHTML = `
+          <p><strong>医生姓名：</strong>${doctor.name}</p>
+          <p><strong>职称：</strong>${doctor.title}</p>
+          <p><strong>科室：</strong>${doctor.department ? doctor.department.name : '未知'}</p>
+          <p><strong>工作时间：</strong>${doctor.workTime || '未设置'}</p>
+        `;
+        modal.style.display = 'block';
+      }
+    }
+
+    // 关闭挂号弹窗
+    function closeRegistrationModal() {
+      document.getElementById('registrationModal').style.display = 'none';
+    }
+
+    // 确认挂号
+    async function confirmRegistration() {
+      try {
+        // TODO: 实现挂号逻辑
+        alert('挂号成功！');
+        closeRegistrationModal();
+      } catch (error) {
+        console.error('挂号失败:', error);
+        alert('挂号失败，请重试');
+      }
+    }
+  </script>
+</body>
+</html> 

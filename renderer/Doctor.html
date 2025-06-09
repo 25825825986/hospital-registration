@@ -133,11 +133,36 @@
       font-weight: bold;
       background-color: #f0f4f8;
     }
+    /* 添加返回按钮样式 */
+    .btn-secondary {
+      background-color: #6c757d;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #5a6268;
+    }
+    
+    .btn-secondary i {
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>医生管理</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2>医生管理</h2>
+      <button onclick="window.location.href='dashboard.html'" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> 返回
+      </button>
+    </div>
 
     <div class="filter-section">
       <label for="filterDepartment">筛选科室</label>
@@ -172,9 +197,6 @@
   <div id="doctorModal" class="modal">
     <div class="modal-content">
       <h3 id="modalTitle">新增医生</h3>
-      <label for="modalDoctorId">医生ID</label>
-      <input type="text" id="modalDoctorId" placeholder="系统自动生成" disabled />
-
       <label for="modalName">姓名</label>
       <input type="text" id="modalName" placeholder="请输入医生姓名" />
 
@@ -378,7 +400,6 @@
 
     function openAddModal() {
       document.getElementById('modalTitle').textContent = '新增医生';
-      document.getElementById('modalDoctorId').value = '';
       document.getElementById('modalName').value = '';
       document.getElementById('modalTitleInput').value = '主任医师';
       document.getElementById('modalDepartment').value = '';
@@ -399,7 +420,6 @@
         }
         
         document.getElementById('modalTitle').textContent = '编辑医生';
-        document.getElementById('modalDoctorId').value = doctor.doctorId;
         document.getElementById('modalName').value = doctor.name;
         document.getElementById('modalTitleInput').value = doctor.title;
         document.getElementById('modalDepartment').value = doctor.departmentId;
@@ -421,7 +441,6 @@
     async function saveDoctor() {
       try {
         const doctorData = {
-          doctorId: document.getElementById('modalDoctorId').value,
           name: document.getElementById('modalName').value,
           title: document.getElementById('modalTitleInput').value,
           departmentId: document.getElementById('modalDepartment').value,
