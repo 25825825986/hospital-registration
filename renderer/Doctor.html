@@ -153,6 +153,53 @@
     .btn-secondary i {
       font-size: 14px;
     }
+    /* 添加工作时间选择样式 */
+    .schedule-container {
+      margin: 10px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .schedule-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .schedule-day {
+      flex: 1;
+      min-width: 120px;
+      padding: 10px;
+      background: white;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .schedule-day label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+
+    .time-slots {
+      display: flex;
+      gap: 10px;
+      margin-top: 5px;
+    }
+
+    .time-slots label {
+      font-weight: normal;
+      margin: 0;
+    }
+
+    .day-checkbox:checked + label {
+      color: #007bff;
+    }
+
+    .time-checkbox:checked + label {
+      color: #28a745;
+    }
   </style>
 </head>
 <body>
@@ -209,8 +256,81 @@
       <label for="modalDepartment">科室</label>
       <select id="modalDepartment"></select>
 
-      <label for="modalWorkTime">工作时间</label>
-      <input type="text" id="modalWorkTime" placeholder="例如：周一至周五 8:00-17:00" />
+      <label>工作时间</label>
+      <div class="schedule-container">
+        <div class="schedule-row">
+          <div class="schedule-day">
+            <input type="checkbox" id="monday" class="day-checkbox">
+            <label for="monday">周一</label>
+            <div class="time-slots">
+              <input type="checkbox" id="monday-morning" class="time-checkbox" data-day="monday" data-time="morning">
+              <label for="monday-morning">上午</label>
+              <input type="checkbox" id="monday-afternoon" class="time-checkbox" data-day="monday" data-time="afternoon">
+              <label for="monday-afternoon">下午</label>
+            </div>
+          </div>
+          <div class="schedule-day">
+            <input type="checkbox" id="tuesday" class="day-checkbox">
+            <label for="tuesday">周二</label>
+            <div class="time-slots">
+              <input type="checkbox" id="tuesday-morning" class="time-checkbox" data-day="tuesday" data-time="morning">
+              <label for="tuesday-morning">上午</label>
+              <input type="checkbox" id="tuesday-afternoon" class="time-checkbox" data-day="tuesday" data-time="afternoon">
+              <label for="tuesday-afternoon">下午</label>
+            </div>
+          </div>
+          <div class="schedule-day">
+            <input type="checkbox" id="wednesday" class="day-checkbox">
+            <label for="wednesday">周三</label>
+            <div class="time-slots">
+              <input type="checkbox" id="wednesday-morning" class="time-checkbox" data-day="wednesday" data-time="morning">
+              <label for="wednesday-morning">上午</label>
+              <input type="checkbox" id="wednesday-afternoon" class="time-checkbox" data-day="wednesday" data-time="afternoon">
+              <label for="wednesday-afternoon">下午</label>
+            </div>
+          </div>
+          <div class="schedule-day">
+            <input type="checkbox" id="thursday" class="day-checkbox">
+            <label for="thursday">周四</label>
+            <div class="time-slots">
+              <input type="checkbox" id="thursday-morning" class="time-checkbox" data-day="thursday" data-time="morning">
+              <label for="thursday-morning">上午</label>
+              <input type="checkbox" id="thursday-afternoon" class="time-checkbox" data-day="thursday" data-time="afternoon">
+              <label for="thursday-afternoon">下午</label>
+            </div>
+          </div>
+          <div class="schedule-day">
+            <input type="checkbox" id="friday" class="day-checkbox">
+            <label for="friday">周五</label>
+            <div class="time-slots">
+              <input type="checkbox" id="friday-morning" class="time-checkbox" data-day="friday" data-time="morning">
+              <label for="friday-morning">上午</label>
+              <input type="checkbox" id="friday-afternoon" class="time-checkbox" data-day="friday" data-time="afternoon">
+              <label for="friday-afternoon">下午</label>
+            </div>
+          </div>
+          <div class="schedule-day">
+            <input type="checkbox" id="saturday" class="day-checkbox">
+            <label for="saturday">周六</label>
+            <div class="time-slots">
+              <input type="checkbox" id="saturday-morning" class="time-checkbox" data-day="saturday" data-time="morning">
+              <label for="saturday-morning">上午</label>
+              <input type="checkbox" id="saturday-afternoon" class="time-checkbox" data-day="saturday" data-time="afternoon">
+              <label for="saturday-afternoon">下午</label>
+            </div>
+          </div>
+          <div class="schedule-day">
+            <input type="checkbox" id="sunday" class="day-checkbox">
+            <label for="sunday">周日</label>
+            <div class="time-slots">
+              <input type="checkbox" id="sunday-morning" class="time-checkbox" data-day="sunday" data-time="morning">
+              <label for="sunday-morning">上午</label>
+              <input type="checkbox" id="sunday-afternoon" class="time-checkbox" data-day="sunday" data-time="afternoon">
+              <label for="sunday-afternoon">下午</label>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <label for="modalRemain">剩余挂号数</label>
       <input type="number" id="modalRemain" min="0" value="30" />
@@ -255,6 +375,9 @@
 
       // 导出按钮事件
       document.getElementById('btnExport').addEventListener('click', exportDoctors);
+
+      // 处理工作时间选择
+      initScheduleHandlers();
     });
 
     async function loadDepartments() {
@@ -387,7 +510,7 @@
           <td>${doctor.title || ''}</td>
           <td>${doctor.Department ? doctor.Department.name : ''}</td>
           <td>${doctor.remain !== undefined ? doctor.remain : ''}</td>
-          <td>${doctor.workTime || ''}</td>
+          <td>${formatSchedule(doctor.schedule)}</td>
           <td>${doctor.bio || ''}</td>
           <td class="actions">
             <button class="btn btn-sm btn-primary" onclick="editDoctor('${doctor.doctorId}')">编辑</button>
@@ -400,95 +523,313 @@
 
     function openAddModal() {
       document.getElementById('modalTitle').textContent = '新增医生';
+      
+      // 确保所有输入框可用
+      document.getElementById('modalName').disabled = false;
+      document.getElementById('modalTitleInput').disabled = false;
+      document.getElementById('modalDepartment').disabled = false;
+      document.getElementById('modalRemain').disabled = false;
+      document.getElementById('modalBio').disabled = false;
+      
+      // 重置所有输入框的值
       document.getElementById('modalName').value = '';
       document.getElementById('modalTitleInput').value = '主任医师';
       document.getElementById('modalDepartment').value = '';
-      document.getElementById('modalWorkTime').value = '周一至周五 8:00-17:00';
       document.getElementById('modalRemain').value = '30';
       document.getElementById('modalBio').value = '';
+      
+      // 重置工作时间选择
+      setScheduleData('0'.repeat(21));
+      
+      // 显示模态框
       document.getElementById('doctorModal').style.display = 'block';
     }
 
-    async function editDoctor(doctorId) {
-      try {
-        console.log('获取医生信息:', doctorId);
-        const doctor = await window.electronAPI.getDoctor(doctorId);
-        
-        if (!doctor) {
-          alert('获取医生信息失败');
-          return;
-        }
-        
-        document.getElementById('modalTitle').textContent = '编辑医生';
-        document.getElementById('modalName').value = doctor.name;
-        document.getElementById('modalTitleInput').value = doctor.title;
-        document.getElementById('modalDepartment').value = doctor.departmentId;
-        document.getElementById('modalWorkTime').value = doctor.workTime || '';
-        document.getElementById('modalRemain').value = doctor.remain;
-        document.getElementById('modalBio').value = doctor.bio || '';
-        
-        document.getElementById('doctorModal').style.display = 'block';
-      } catch (error) {
-        console.error('获取医生信息失败:', error);
-        alert('获取医生信息失败: ' + error.message);
-      }
+    function openEditModal(doctor) {
+      document.getElementById('modalTitle').textContent = '编辑医生';
+      
+      // 确保所有输入框可用
+      document.getElementById('modalName').disabled = false;
+      document.getElementById('modalTitleInput').disabled = false;
+      document.getElementById('modalDepartment').disabled = false;
+      document.getElementById('modalRemain').disabled = false;
+      document.getElementById('modalBio').disabled = false;
+      
+      // 设置输入框的值
+      document.getElementById('modalName').value = doctor.name;
+      document.getElementById('modalTitleInput').value = doctor.title;
+      document.getElementById('modalDepartment').value = doctor.departmentId;
+      document.getElementById('modalRemain').value = doctor.remain;
+      document.getElementById('modalBio').value = doctor.bio || '';
+      
+      // 设置工作时间
+      setScheduleData(doctor.schedule || '0'.repeat(21));
+      
+      // 显示模态框
+      document.getElementById('doctorModal').style.display = 'block';
     }
 
     function closeModal() {
-      document.getElementById('doctorModal').style.display = 'none';
+      const modal = document.getElementById('doctorModal');
+      modal.style.display = 'none';
+      
+      // 重置所有输入框状态
+      document.getElementById('modalName').value = '';
+      document.getElementById('modalTitleInput').value = '主任医师';
+      document.getElementById('modalDepartment').value = '';
+      document.getElementById('modalRemain').value = '30';
+      document.getElementById('modalBio').value = '';
+      
+      // 重置工作时间选择
+      setScheduleData('0'.repeat(21));
+      
+      // 移除所有输入框的禁用状态
+      document.getElementById('modalName').disabled = false;
+      document.getElementById('modalTitleInput').disabled = false;
+      document.getElementById('modalDepartment').disabled = false;
+      document.getElementById('modalRemain').disabled = false;
+      document.getElementById('modalBio').disabled = false;
+      
+      // 移除所有复选框的禁用状态
+      document.querySelectorAll('.day-checkbox, .time-checkbox').forEach(checkbox => {
+        checkbox.disabled = false;
+      });
     }
 
     async function saveDoctor() {
       try {
+        if (!validateSchedule()) {
+          return;
+        }
+
         const doctorData = {
           name: document.getElementById('modalName').value,
           title: document.getElementById('modalTitleInput').value,
           departmentId: document.getElementById('modalDepartment').value,
-          workTime: document.getElementById('modalWorkTime').value,
-          remain: parseInt(document.getElementById('modalRemain').value) || 30,
-          bio: document.getElementById('modalBio').value
+          remain: parseInt(document.getElementById('modalRemain').value),
+          bio: document.getElementById('modalBio').value,
+          schedule: getScheduleData()
         };
 
-        console.log('保存医生数据:', doctorData);
-        const success = await window.electronAPI.updateDoctor(doctorData);
-        
-        if (success) {
-          alert('保存成功');
-          closeModal();
-          await loadDoctors();
-        } else {
-          alert('保存失败，请重试');
+        if (!doctorData.name || !doctorData.departmentId) {
+          alert('请填写必要信息');
+          return;
         }
+
+        await window.electronAPI.updateDoctor(doctorData);
+        alert('保存成功');
+        closeModal();
+        await loadDoctors();
       } catch (error) {
-        console.error('保存医生数据失败:', error);
-        alert('保存失败: ' + error.message);
+        console.error('保存医生信息失败:', error);
+        alert('保存失败，请重试');
       }
     }
 
     async function deleteDoctor(doctorId) {
+      if (!confirm('确定要删除这个医生吗？')) {
+        return;
+      }
+
       try {
-        if (!confirm('确定要删除该医生吗？')) {
-          return;
-        }
-        
-        console.log('删除医生:', doctorId);
-        const success = await window.electronAPI.deleteDoctor(doctorId);
-        
-        if (success) {
-          alert('删除成功');
-          await loadDoctors();
-        } else {
-          alert('删除失败');
-        }
+        await window.electronAPI.deleteDoctor(doctorId);
+        alert('删除成功');
+        await loadDoctors();
       } catch (error) {
         console.error('删除医生失败:', error);
-        alert('删除失败: ' + error.message);
+        alert('删除失败，请重试');
       }
     }
 
     function exportDoctors() {
       // TODO: 实现导出功能
       alert('导出功能开发中...');
+    }
+
+    // 处理工作时间选择
+    function initScheduleHandlers() {
+      // 处理天选择
+      document.querySelectorAll('.day-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          const dayId = this.id;
+          const timeCheckboxes = document.querySelectorAll(`.time-checkbox[data-day="${dayId}"]`);
+          timeCheckboxes.forEach(timeCheckbox => {
+            timeCheckbox.disabled = !this.checked;
+            if (!this.checked) {
+              timeCheckbox.checked = false;
+            }
+          });
+        });
+      });
+
+      // 处理时间段选择
+      document.querySelectorAll('.time-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          const dayId = this.dataset.day;
+          const dayCheckbox = document.getElementById(dayId);
+          const timeCheckboxes = document.querySelectorAll(`.time-checkbox[data-day="${dayId}"]`);
+          const checkedCount = Array.from(timeCheckboxes).filter(cb => cb.checked).length;
+          
+          if (checkedCount === 0) {
+            dayCheckbox.checked = false;
+          }
+        });
+      });
+    }
+
+    // 获取工作时间数据
+    function getScheduleData() {
+      // 初始化21位二进制字符串，全部设为0
+      let scheduleBinary = '0'.repeat(21);
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      
+      days.forEach((day, index) => {
+        const dayCheckbox = document.getElementById(day);
+        if (dayCheckbox.checked) {
+          // 设置是否上班（第一位）
+          scheduleBinary = scheduleBinary.substring(0, index * 3) + '1' + scheduleBinary.substring(index * 3 + 1);
+          
+          // 设置上午是否上班（第二位）
+          const morningChecked = document.getElementById(`${day}-morning`).checked;
+          scheduleBinary = scheduleBinary.substring(0, index * 3 + 1) + (morningChecked ? '1' : '0') + scheduleBinary.substring(index * 3 + 2);
+          
+          // 设置下午是否上班（第三位）
+          const afternoonChecked = document.getElementById(`${day}-afternoon`).checked;
+          scheduleBinary = scheduleBinary.substring(0, index * 3 + 2) + (afternoonChecked ? '1' : '0') + scheduleBinary.substring(index * 3 + 3);
+        }
+      });
+
+      return scheduleBinary;
+    }
+
+    // 设置工作时间数据
+    function setScheduleData(scheduleBinary) {
+      if (!scheduleBinary || scheduleBinary.length !== 21) return;
+      
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      
+      days.forEach((day, index) => {
+        const dayCheckbox = document.getElementById(day);
+        const startPos = index * 3;
+        
+        // 检查是否上班（第一位）
+        const isWorking = scheduleBinary[startPos] === '1';
+        dayCheckbox.checked = isWorking;
+        
+        // 设置上午是否上班（第二位）
+        const morningCheckbox = document.getElementById(`${day}-morning`);
+        morningCheckbox.checked = scheduleBinary[startPos + 1] === '1';
+        morningCheckbox.disabled = !isWorking;
+        
+        // 设置下午是否上班（第三位）
+        const afternoonCheckbox = document.getElementById(`${day}-afternoon`);
+        afternoonCheckbox.checked = scheduleBinary[startPos + 2] === '1';
+        afternoonCheckbox.disabled = !isWorking;
+      });
+    }
+
+    // 验证工作时间选择
+    function validateSchedule() {
+      const scheduleBinary = getScheduleData();
+      let hasWorkingDay = false;
+      
+      // 检查是否有工作日
+      for (let i = 0; i < 21; i += 3) {
+        if (scheduleBinary[i] === '1') {
+          hasWorkingDay = true;
+          // 检查该天是否至少选择了一个时间段
+          if (scheduleBinary[i + 1] === '0' && scheduleBinary[i + 2] === '0') {
+            const dayIndex = i / 3;
+            const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+            alert(`请为${days[dayIndex]}选择至少一个时间段（上午或下午）`);
+            return false;
+          }
+        }
+      }
+      
+      if (!hasWorkingDay) {
+        alert('请至少选择一天的工作时间');
+        return false;
+      }
+      
+      return true;
+    }
+
+    // 格式化工作时间显示
+    function formatSchedule(scheduleBinary) {
+      if (!scheduleBinary || scheduleBinary.length !== 21) return '未设置';
+      
+      const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+      const workingDays = [];
+      
+      for (let i = 0; i < 21; i += 3) {
+        const dayIndex = i / 3;
+        if (scheduleBinary[i] === '1') {
+          const morning = scheduleBinary[i + 1] === '1';
+          const afternoon = scheduleBinary[i + 2] === '1';
+          let timeStr = '';
+          
+          if (morning && afternoon) {
+            timeStr = '全天';
+          } else if (morning) {
+            timeStr = '上午';
+          } else if (afternoon) {
+            timeStr = '下午';
+          }
+          
+          workingDays.push(`${days[dayIndex]}${timeStr}`);
+        }
+      }
+      
+      if (workingDays.length === 0) return '未设置';
+      
+      // 优化显示格式
+      if (workingDays.length === 7) {
+        // 如果每天都上班，检查是否都是相同的时间段
+        const allSameTime = workingDays.every(day => day.includes(workingDays[0].slice(2)));
+        if (allSameTime) {
+          return `每天${workingDays[0].slice(2)}`;
+        }
+      }
+      
+      // 检查连续的工作日
+      const result = [];
+      let currentGroup = [];
+      
+      for (let i = 0; i < workingDays.length; i++) {
+        const currentDay = workingDays[i];
+        const currentDayIndex = days.indexOf(currentDay.slice(0, 2));
+        
+        if (currentGroup.length === 0) {
+          currentGroup.push(currentDay);
+        } else {
+          const lastDay = currentGroup[currentGroup.length - 1];
+          const lastDayIndex = days.indexOf(lastDay.slice(0, 2));
+          
+          // 检查是否连续且时间段相同
+          if (currentDayIndex - lastDayIndex === 1 && 
+              currentDay.slice(2) === lastDay.slice(2)) {
+            currentGroup.push(currentDay);
+          } else {
+            // 处理当前组
+            if (currentGroup.length === 1) {
+              result.push(currentGroup[0]);
+            } else {
+              result.push(`${currentGroup[0].slice(0, 2)}至${currentGroup[currentGroup.length - 1].slice(0, 2)}${currentGroup[0].slice(2)}`);
+            }
+            currentGroup = [currentDay];
+          }
+        }
+      }
+      
+      // 处理最后一组
+      if (currentGroup.length === 1) {
+        result.push(currentGroup[0]);
+      } else if (currentGroup.length > 1) {
+        result.push(`${currentGroup[0].slice(0, 2)}至${currentGroup[currentGroup.length - 1].slice(0, 2)}${currentGroup[0].slice(2)}`);
+      }
+      
+      return result.join('、');
     }
   </script>
 </body>
