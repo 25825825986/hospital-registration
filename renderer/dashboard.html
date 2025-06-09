@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>医院挂号管理系统</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f5f7fa;
+    }
+    header {
+      background-color: #4a90e2;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 24px;
+    }
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 40px;
+    }
+    .card {
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      margin: 20px;
+      padding: 30px;
+      width: 220px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .card:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <header>医院挂号管理系统</header>
+  <div class="container">
+    <div class="card" onclick="goTo('register.html')">
+      📝<br/>挂号预约
+    </div>
+    <div class="card" onclick="goTo('doctor.html')">
+      👨‍⚕️<br/>医生管理
+    </div>
+    <div class="card" onclick="goTo('query.html')">
+      📋<br/>挂号查询
+    </div>
+  </div>
+
+  <script>
+    function goTo(page) {
+      window.location.href = page;
+    }
+  </script>
+</body>
+</html>

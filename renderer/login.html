@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管理员登录</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .login-box {
+      background: #fff;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+      width: 360px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 24px;
+      color: #333;
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #357ab7;
+    }
+    .error {
+      color: red;
+      text-align: center;
+      margin-top: 10px;
+      min-height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h2>管理员登录</h2>
+    <input type="text" id="adminId" placeholder="管理员ID" />
+    <input type="password" id="password" placeholder="密码" />
+    <button onclick="login()">登录</button>
+    <div class="error" id="error"></div>
+  </div>
+
+  <script>
+    async function login() {
+      const id = document.getElementById('adminId').value.trim();
+      const pwd = document.getElementById('password').value.trim();
+
+      if (!id || !pwd) {
+        document.getElementById('error').textContent = '请输入管理员ID和密码';
+        return;
+      }
+
+      try {
+        const ok = await window.api.loginAdmin(id, pwd);
+        if (ok) {
+          window.location.href = 'dashboard.html';
+        } else {
+          document.getElementById('error').textContent = '账号或密码错误';
+        }
+      } catch (e) {
+        document.getElementById('error').textContent = '登录失败，请稍后重试';
+        console.error(e);
+      }
+    }
+  </script>
+</body>
+</html>

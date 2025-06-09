@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>挂号预约</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 20px;
+      background: #f0f4f8;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      color: #555;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    button {
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-top: 25px;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #357ab7;
+    }
+    .doctor-info {
+      margin-top: 10px;
+      padding: 10px;
+      background: #eef5fb;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #333;
+    }
+    .error, .success {
+      margin-top: 15px;
+      text-align: center;
+      font-weight: 600;
+    }
+    .error {
+      color: #c0392b;
+    }
+    .success {
+      color: #27ae60;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>挂号预约</h2>
+    
+    <label for="idCard">身份证号</label>
+    <input type="text" id="idCard" placeholder="请输入身份证号" maxlength="18" />
+
+    <label for="name">姓名</label>
+    <input type="text" id="name" placeholder="请输入姓名" />
+
+    <label for="age">年龄</label>
+    <input type="number" id="age" min="0" max="150" />
+
+    <label for="gender">性别</label>
+    <select id="gender">
+      <option value="">请选择性别</option>
+      <option value="男">男</option>
+      <option value="女">女</option>
+      <option value="其他">其他</option>
+    </select>
+
+    <label for="phone">电话</label>
+    <input type="text" id="phone" placeholder="请输入联系电话" />
+
+    <label for="department">选择科室</label>
+    <select id="department">
+      <option value="">请选择科室</option>
+    </select>
+
+    <label for="doctor">选择医生</label>
+    <select id="doctor" disabled>
+      <option value="">请选择医生</option>
+    </select>
+
+    <div class="doctor-info" id="doctorInfo" style="display:none;"></div>
+
+    <label for="dateTime">挂号时间</label>
+    <input type="date" id="dateTime" />
+
+    <button id="registerBtn">确认挂号</button>
+
+    <div class="error" id="errorMsg"></div>
+    <div class="success" id="successMsg"></div>
+  </div>
+
+  <script>
+    const api = window.api;
+    let departments = [];
+    let doctors = [];
+
+    async function loadDepartments() {
+      console.log("加载科室列表...");
+      const departmentList = [
+        "普通外科", "骨科", "神经外科", "心胸外科", "泌尿外科",
+        "肝胆外科", "肛肠外科", "烧伤科", "妇科", "产科",
+        "儿科", "新生儿科", "眼科", "耳鼻喉科", "口腔科",
+        "皮肤科", "风湿免疫科", "急诊科"
+      ];
+      departments = departmentList.map(name => ({
+        departmentId: name,
+        name
+      }));
+
+      const deptSelect = document.getElementById('department');
+      deptSelect.innerHTML = '<option value="">请选择科室</option>';
+      departments.forEach(dep => {
+        const option = document.createElement('option');
+        option.value = dep.departmentId;
+        option.textContent = dep.name;
+        deptSelect.appendChild(option);
+      });
+    }
+
+    document.getElementById('idCard').addEventListener('blur', async () => {
+      const idCard = document.getElementById('idCard').value.trim();
+      clearMessages();
+      if (idCard.length === 0) return;
+
+      try {
+        const patient = await api.getPatientByIdCard?.(idCard);
+        if (patient) {
+          document.getElementById('name').value = patient.name || '';
+          document.getElementById('age').value = patient.age || '';
+          document.getElementById('gender').value = patient.gender || '';
+          document.getElementById('phone').value = patient.phone || '';
+        } else {
+          document.getElementById('name').value = '';
+          document.getElementById('age').value = '';
+          document.getElementById('gender').value = '';
+          document.getElementById('phone').value = '';
+        }
+      } catch (err) {
+        showError('查询患者信息失败');
+      }
+    });
+
+    document.getElementById('department').addEventListener('change', async () => {
+      clearMessages();
+      const departmentId = document.getElementById('department').value;
+      const doctorSelect = document.getElementById('doctor');
+      doctorSelect.innerHTML = '<option value="">请选择医生</option>';
+      doctorSelect.disabled = true;
+      document.getElementById('doctorInfo').style.display = 'none';
+
+      if (!departmentId) return;
+
+      try {
+        doctors = await api.getDoctorsByDepartment?.(departmentId) || [];
+        doctors = doctors.filter(d => d.remain > 0);
+        doctors.forEach(doc => {
+          const option = document.createElement('option');
+          option.value = doc.doctorId;
+          option.textContent = `${doc.name} (${doc.title}) 剩余挂号: ${doc.remain}`;
+          doctorSelect.appendChild(option);
+        });
+
+        doctorSelect.disabled = false;
+      } catch (err) {
+        showError('加载医生列表失败');
+      }
+    });
+
+    document.getElementById('doctor').addEventListener('change', () => {
+      clearMessages();
+      const doctorId = document.getElementById('doctor').value;
+      const infoDiv = document.getElementById('doctorInfo');
+      if (!doctorId) {
+        infoDiv.style.display = 'none';
+        infoDiv.textContent = '';
+        return;
+      }
+
+      const doc = doctors.find(d => d.doctorId === doctorId);
+      if (doc) {
+        infoDiv.style.display = 'block';
+        infoDiv.textContent = `简介: ${doc.bio || '无'}\n职称: ${doc.title}\n剩余挂号数: ${doc.remain}`;
+      }
+    });
+
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      clearMessages();
+
+      const idCard = document.getElementById('idCard').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const age = parseInt(document.getElementById('age').value);
+      const gender = document.getElementById('gender').value;
+      const phone = document.getElementById('phone').value.trim();
+      const departmentId = document.getElementById('department').value;
+      const doctorId = document.getElementById('doctor').value;
+      const dateTime = document.getElementById('dateTime').value;
+
+      if (!idCard || !name || isNaN(age) || !gender || !phone || !departmentId || !doctorId || !dateTime) {
+        showError('请完整填写所有信息');
+        return;
+      }
+
+      try {
+        const res = await api.registerPatient({
+          idCard, name, age, gender, phone, doctorId, departmentId, dateTime
+        });
+        if (res) {
+          showSuccess('挂号成功');
+          resetForm();
+        } else {
+          showError('挂号失败');
+        }
+      } catch (err) {
+        showError('挂号过程中出错');
+        console.error(err);
+      }
+    });
+
+    function showError(msg) {
+      document.getElementById('errorMsg').textContent = msg;
+      document.getElementById('successMsg').textContent = '';
+    }
+    function showSuccess(msg) {
+      document.getElementById('successMsg').textContent = msg;
+      document.getElementById('errorMsg').textContent = '';
+    }
+    function clearMessages() {
+      document.getElementById('errorMsg').textContent = '';
+      document.getElementById('successMsg').textContent = '';
+    }
+    function resetForm() {
+      document.getElementById('idCard').value = '';
+      document.getElementById('name').value = '';
+      document.getElementById('age').value = '';
+      document.getElementById('gender').value = '';
+      document.getElementById('phone').value = '';
+      document.getElementById('department').value = '';
+      document.getElementById('doctor').innerHTML = '<option value="">请选择医生</option>';
+      document.getElementById('doctor').disabled = true;
+      document.getElementById('doctorInfo').style.display = 'none';
+      document.getElementById('doctorInfo').textContent = '';
+      document.getElementById('dateTime').value = '';
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      console.log("页面加载完成，准备加载科室...");
+      await loadDepartments();
+    });
+  </script>
+</body>
+</html>
