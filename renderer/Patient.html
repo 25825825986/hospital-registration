@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <title>挂号预约</title>
@@ -45,7 +46,8 @@
       margin-top: 20px;
     }
 
-    th, td {
+    th,
+    td {
       padding: 12px;
       text-align: left;
       border-bottom: 1px solid #ddd;
@@ -89,64 +91,17 @@
       align-items: center;
       gap: 8px;
     }
-    
+
     .btn-secondary:hover {
       background-color: #5a6268;
     }
-    
+
     .btn-secondary i {
       font-size: 14px;
     }
-
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
-    }
-
-    .modal-content {
-      background-color: white;
-      margin: 15% auto;
-      padding: 20px;
-      border-radius: 8px;
-      width: 50%;
-      max-width: 500px;
-    }
-
-    .modal-content h3 {
-      margin-top: 0;
-      color: #333;
-    }
-
-    .modal-content label {
-      display: block;
-      margin: 10px 0 5px;
-      color: #555;
-    }
-
-    .modal-content input,
-    .modal-content select {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      margin-bottom: 10px;
-    }
-
-    .modal-footer {
-      margin-top: 20px;
-      text-align: right;
-    }
-
-    .modal-footer button {
-      margin-left: 10px;
-    }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -161,6 +116,12 @@
       <select id="filterDepartment">
         <option value="">请选择科室</option>
       </select>
+      <div id="weekdayButtons" style="margin-top: 16px; display: flex; gap: 8px;">
+        <!-- 周一到周日按钮 -->
+      </div>
+      <div id="ampmButtons" style="margin-top: 12px; display: flex; gap: 8px;">
+        <!-- 上午/下午按钮 -->
+      </div>
     </div>
 
     <table id="doctorTable">
@@ -170,7 +131,6 @@
           <th>职称</th>
           <th>科室</th>
           <th>剩余挂号数</th>
-          <th>工作时间</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -180,23 +140,80 @@
     </table>
   </div>
 
-  <!-- 挂号弹窗 -->
-  <div id="registrationModal" class="modal">
-    <div class="modal-content">
-      <h3>确认挂号</h3>
-      <div id="registrationInfo"></div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeRegistrationModal()">取消</button>
-        <button class="btn btn-primary" onclick="confirmRegistration()">确认挂号</button>
-      </div>
-    </div>
-  </div>
-
   <script>
+    let doctors = [];
+    let selectedDoctor = null;
+    let departmentsMap = {}; // departmentId -> department对象
+    let currentWeekday = 1; // 1-7，默认周一
+    let currentAMPM = '上午'; // '上午' 或 '下午'
+
     // 页面加载完成后执行
     document.addEventListener('DOMContentLoaded', () => {
       loadDepartments();
+      renderWeekdayButtons();
+      renderAMPMButtons();
     });
+
+    // 渲染周一到周日按钮
+    function renderWeekdayButtons() {
+      const weekNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+      const btnsDiv = document.getElementById('weekdayButtons');
+      btnsDiv.innerHTML = '';
+      for (let i = 1; i <= 7; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-secondary';
+        btn.textContent = weekNames[i - 1];
+        btn.dataset.weekday = i;
+        btn.onclick = function () {
+          currentWeekday = i;
+          highlightWeekdayButton();
+          renderDoctorsTable(filterDoctors(doctors, currentWeekday, currentAMPM));
+        };
+        btnsDiv.appendChild(btn);
+      }
+      highlightWeekdayButton();
+    }
+
+    function highlightWeekdayButton() {
+      const btns = document.querySelectorAll('#weekdayButtons button');
+      btns.forEach(btn => {
+        if (parseInt(btn.dataset.weekday) === currentWeekday) {
+          btn.style.backgroundColor = '#007bff';
+        } else {
+          btn.style.backgroundColor = '#6c757d';
+        }
+      });
+    }
+
+    // 渲染上午/下午按钮
+    function renderAMPMButtons() {
+      const ampmDiv = document.getElementById('ampmButtons');
+      ampmDiv.innerHTML = '';
+      ['上午', '下午'].forEach(ampm => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-secondary';
+        btn.textContent = ampm;
+        btn.dataset.ampm = ampm;
+        btn.onclick = function () {
+          currentAMPM = ampm;
+          highlightAMPMButton();
+          renderDoctorsTable(filterDoctors(doctors, currentWeekday, currentAMPM));
+        };
+        ampmDiv.appendChild(btn);
+      });
+      highlightAMPMButton();
+    }
+
+    function highlightAMPMButton() {
+      const btns = document.querySelectorAll('#ampmButtons button');
+      btns.forEach(btn => {
+        if (btn.dataset.ampm === currentAMPM) {
+          btn.style.backgroundColor = '#007bff';
+        } else {
+          btn.style.backgroundColor = '#6c757d';
+        }
+      });
+    }
 
     // 加载科室列表
     async function loadDepartments() {
@@ -204,15 +221,14 @@
         const departments = await window.electronAPI.getDepartments();
         const select = document.getElementById('filterDepartment');
         select.innerHTML = '<option value="">请选择科室</option>';
-        
+        departmentsMap = {};
         departments.forEach(dept => {
+          departmentsMap[dept.departmentId] = dept;
           const option = document.createElement('option');
           option.value = dept.departmentId;
           option.textContent = dept.name;
           select.appendChild(option);
         });
-
-        // 添加科室选择事件监听
         select.addEventListener('change', loadDoctors);
       } catch (error) {
         console.error('加载科室失败:', error);
@@ -224,12 +240,36 @@
     async function loadDoctors() {
       try {
         const departmentId = document.getElementById('filterDepartment').value;
-        const doctors = await window.electronAPI.getDoctors(departmentId);
-        renderDoctorsTable(doctors);
+        doctors = await window.electronAPI.getDoctors(departmentId);
+        // 修复医生科室信息
+        doctors.forEach(doc => {
+          if (!doc.department && doc.departmentId && departmentsMap[doc.departmentId]) {
+            doc.department = departmentsMap[doc.departmentId];
+          }
+        });
+        renderDoctorsTable(filterDoctors(doctors, currentWeekday, currentAMPM));
       } catch (error) {
         console.error('加载医生失败:', error);
         alert('加载医生失败，请重试');
       }
+    }
+
+    // 综合过滤医生
+    function filterDoctors(doctors, weekday, ampm) {
+      // weekday: 1-7，ampm: '上午'/'下午'
+      // schedule: 21位字符串，每3位为一组，第一位是否上班，第二位上午，第三位下午
+      return doctors.filter(doc => {
+        if (!doc.schedule || doc.schedule.length < 21) return false;
+        const idx = (weekday - 1) * 3;
+        // 先判断当天是否上班
+        if (doc.schedule[idx] !== '1') return false;
+        // 再判断上午/下午
+        if (ampm === '上午') {
+          return doc.schedule[idx + 1] === '1';
+        } else {
+          return doc.schedule[idx + 2] === '1';
+        }
+      });
     }
 
     // 渲染医生表格
@@ -239,7 +279,7 @@
 
       if (!doctors || doctors.length === 0) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="6" style="text-align: center;">暂无医生信息</td>';
+        tr.innerHTML = '<td colspan="5" style="text-align: center;">暂无医生信息</td>';
         tbody.appendChild(tr);
         return;
       }
@@ -249,11 +289,10 @@
         tr.innerHTML = `
           <td>${doctor.name}</td>
           <td>${doctor.title}</td>
-          <td>${doctor.department ? doctor.department.name : '未知'}</td>
+          <td>${doctor.department ? doctor.department.name : (departmentsMap[doctor.departmentId]?.name || '未知')}</td>
           <td>${doctor.remain}</td>
-          <td>${doctor.workTime || '未设置'}</td>
           <td>
-            <button class="btn btn-primary" onclick="showRegistrationModal('${doctor.doctorId}')">
+            <button class="btn btn-primary" onclick="gotoRegisterPage('${doctor.doctorId}')">
               挂号
             </button>
           </td>
@@ -262,40 +301,11 @@
       });
     }
 
-    // 显示挂号弹窗
-    function showRegistrationModal(doctorId) {
-      const modal = document.getElementById('registrationModal');
-      const info = document.getElementById('registrationInfo');
-      
-      // 获取医生信息
-      const doctor = doctors.find(d => d.doctorId === doctorId);
-      if (doctor) {
-        info.innerHTML = `
-          <p><strong>医生姓名：</strong>${doctor.name}</p>
-          <p><strong>职称：</strong>${doctor.title}</p>
-          <p><strong>科室：</strong>${doctor.department ? doctor.department.name : '未知'}</p>
-          <p><strong>工作时间：</strong>${doctor.workTime || '未设置'}</p>
-        `;
-        modal.style.display = 'block';
-      }
-    }
-
-    // 关闭挂号弹窗
-    function closeRegistrationModal() {
-      document.getElementById('registrationModal').style.display = 'none';
-    }
-
-    // 确认挂号
-    async function confirmRegistration() {
-      try {
-        // TODO: 实现挂号逻辑
-        alert('挂号成功！');
-        closeRegistrationModal();
-      } catch (error) {
-        console.error('挂号失败:', error);
-        alert('挂号失败，请重试');
-      }
+    // 跳转到挂号页面
+    function gotoRegisterPage(doctorId) {
+      window.location.href = `PatientRegister.html?doctorId=${encodeURIComponent(doctorId)}`;
     }
   </script>
 </body>
-</html> 
+
+</html>

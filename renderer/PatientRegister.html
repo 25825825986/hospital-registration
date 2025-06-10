@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>患者挂号</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+	<style>
+		body {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			margin: 20px;
+			background: #f5f7fa;
+		}
+
+		.container {
+			max-width: 500px;
+			margin: 0 auto;
+			padding: 24px;
+			background: white;
+			border-radius: 8px;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		}
+
+		.header {
+			display: flex;
+			align-items: center;
+			margin-bottom: 20px;
+		}
+
+		.header button {
+			margin-right: 16px;
+		}
+
+		h2 {
+			margin: 0;
+			flex: 1;
+		}
+
+		.info-block {
+			margin-bottom: 18px;
+			padding: 12px;
+			background: #f8f9fa;
+			border-radius: 4px;
+		}
+
+		label {
+			display: block;
+			margin: 10px 0 5px;
+			color: #555;
+		}
+
+		input,
+		select {
+			width: 100%;
+			padding: 8px;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			margin-bottom: 10px;
+		}
+
+		.btn {
+			padding: 8px 16px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 14px;
+			transition: background-color 0.3s;
+		}
+
+		.btn-primary {
+			background-color: #007bff;
+			color: white;
+		}
+
+		.btn-primary:hover {
+			background-color: #0056b3;
+		}
+
+		.btn-secondary {
+			background-color: #6c757d;
+			color: white;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.btn-secondary:hover {
+			background-color: #5a6268;
+		}
+
+		.btn-secondary i {
+			font-size: 14px;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="container">
+		<div class="header">
+			<button class="btn btn-secondary" onclick="window.history.back()">
+				<i class="fas fa-arrow-left"></i> 返回
+			</button>
+			<h2>患者挂号</h2>
+		</div>
+		<div id="doctorInfo" class="info-block"></div>
+		<form id="patientForm" autocomplete="off">
+			<label for="idCard">身份证号</label>
+			<input type="text" id="idCard" name="idCard" required maxlength="18" pattern="\d{15}|\d{17}[\dXx]">
+			<label for="patientName">姓名</label>
+			<input type="text" id="patientName" name="patientName" required>
+			<label for="patientAge">年龄</label>
+			<input type="number" id="patientAge" name="patientAge" required min="0" max="120">
+			<label for="patientGender">性别</label>
+			<select id="patientGender" name="patientGender" required>
+				<option value="">请选择</option>
+				<option value="男">男</option>
+				<option value="女">女</option>
+			</select>
+			<label for="patientPhone">手机号</label>
+			<input type="text" id="patientPhone" name="patientPhone" required maxlength="11" pattern="\d{11}">
+			<button type="button" class="btn btn-primary" onclick="confirmRegistration()">确认挂号</button>
+		</form>
+	</div>
+	<script>
+		let doctor = null;
+		let doctorId = null;
+
+		document.addEventListener('DOMContentLoaded', async () => {
+			// 获取doctorId
+			const params = new URLSearchParams(window.location.search);
+			doctorId = params.get('doctorId');
+			if (!doctorId) {
+				alert('未指定医生');
+				window.history.back();
+				return;
+			}
+			// 获取医生信息
+			doctor = await window.electronAPI.getDoctor(doctorId);
+			if (!doctor) {
+				alert('医生不存在');
+				window.history.back();
+				return;
+			}
+			// 展示医生信息
+			document.getElementById('doctorInfo').innerHTML = `
+        <div><strong>医生姓名：</strong>${doctor.name}</div>
+        <div><strong>职称：</strong>${doctor.title}</div>
+        <div><strong>科室：</strong>${doctor.Department ? doctor.Department.name : '未知'}</div>
+        <div><strong>工作时间：</strong>${doctor.workTime || '未设置'}</div>
+        <div><strong>剩余挂号数：</strong>${doctor.remain}</div>
+      `;
+			// 自动补全患者信息
+			document.getElementById('idCard').onblur = async function () {
+				const idCard = this.value.trim();
+				if (!idCard) return;
+				try {
+					const patient = await window.electronAPI.getPatientById(idCard);
+					if (patient) {
+						document.getElementById('patientName').value = patient.name;
+						document.getElementById('patientAge').value = patient.age;
+						document.getElementById('patientGender').value = patient.gender;
+						document.getElementById('patientPhone').value = patient.phone;
+					} else {
+						document.getElementById('patientName').value = '';
+						document.getElementById('patientAge').value = '';
+						document.getElementById('patientGender').value = '';
+						document.getElementById('patientPhone').value = '';
+					}
+				} catch (e) { }
+			};
+		});
+
+		async function confirmRegistration() {
+			try {
+				const form = document.getElementById('patientForm');
+				if (!form.reportValidity()) return;
+				const idCard = document.getElementById('idCard').value.trim();
+				const name = document.getElementById('patientName').value.trim();
+				const age = parseInt(document.getElementById('patientAge').value, 10);
+				const gender = document.getElementById('patientGender').value;
+				const phone = document.getElementById('patientPhone').value.trim();
+				if (!doctor) return alert('医生信息异常');
+				const data = {
+					patient: { idCard, name, age, gender, phone },
+					doctorId: doctor.doctorId,
+					departmentId: doctor.departmentId
+				};
+				const result = await window.electronAPI.registerPatient(data);
+				if (result && result.success) {
+					alert('挂号成功！');
+					window.location.href = 'Patient.html';
+				} else {
+					alert(result && result.message ? result.message : '挂号失败');
+				}
+			} catch (error) {
+				console.error('挂号失败:', error);
+				alert('挂号失败，请重试');
+			}
+		}
+	</script>
+</body>
+
+</html>

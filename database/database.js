@@ -23,113 +23,109 @@ const sequelize = new Sequelize({
 
 // 定义模型
 const Admin = sequelize.define('Admin', {
-  adminId: { 
-    type: DataTypes.STRING, 
+  adminId: {
+    type: DataTypes.STRING,
     primaryKey: true,
     allowNull: false
   },
-  password: { 
+  password: {
     type: DataTypes.STRING,
     allowNull: false
   }
 });
 
 const Department = sequelize.define('Department', {
-  departmentId: { 
-    type: DataTypes.STRING, 
+  departmentId: {
+    type: DataTypes.STRING,
     primaryKey: true,
     allowNull: false
   },
-  name: { 
+  name: {
     type: DataTypes.STRING,
     allowNull: false
   }
 });
 
 const Doctor = sequelize.define('Doctor', {
-  doctorId: { 
-    type: DataTypes.STRING, 
+  doctorId: {
+    type: DataTypes.STRING,
     primaryKey: true,
     allowNull: false
   },
-  name: { 
-    type: DataTypes.STRING, 
+  name: {
+    type: DataTypes.STRING,
     allowNull: false
   },
-  workTime: { 
-    type: DataTypes.STRING, 
-    defaultValue: '周一至周五 8:00-17:00'
-  },
-  departmentId: { 
-    type: DataTypes.STRING, 
+  departmentId: {
+    type: DataTypes.STRING,
     allowNull: false
   },
-  title: { 
-    type: DataTypes.STRING, 
+  title: {
+    type: DataTypes.STRING,
     allowNull: false
   },
-  bio: { 
-    type: DataTypes.STRING, 
+  bio: {
+    type: DataTypes.STRING,
     defaultValue: ''
   },
-  remain: { 
-    type: DataTypes.INTEGER, 
+  remain: {
+    type: DataTypes.INTEGER,
     defaultValue: 30
   },
-  schedule: { 
-    type: DataTypes.TEXT, 
+  schedule: {
+    type: DataTypes.TEXT,
     defaultValue: '{}'
   }
 });
 
 const Patient = sequelize.define('Patient', {
-  idCard: { 
-    type: DataTypes.STRING, 
+  idCard: {
+    type: DataTypes.STRING,
     primaryKey: true,
     allowNull: false
   },
-  name: { 
-    type: DataTypes.STRING, 
+  name: {
+    type: DataTypes.STRING,
     allowNull: false
   },
-  age: { 
-    type: DataTypes.INTEGER, 
+  age: {
+    type: DataTypes.INTEGER,
     allowNull: false
   },
-  gender: { 
-    type: DataTypes.STRING, 
+  gender: {
+    type: DataTypes.STRING,
     allowNull: false
   },
-  phone: { 
-    type: DataTypes.STRING, 
+  phone: {
+    type: DataTypes.STRING,
     allowNull: false
   }
 });
 
 const Registration = sequelize.define('Registration', {
-  regId: { 
-    type: DataTypes.STRING, 
+  regId: {
+    type: DataTypes.STRING,
     primaryKey: true,
     allowNull: false
   },
-  patientId: { 
-    type: DataTypes.STRING, 
+  patientId: {
+    type: DataTypes.STRING,
     allowNull: false
   },
-  dateTime: { 
-    type: DataTypes.STRING, 
+  dateTime: {
+    type: DataTypes.STRING,
     allowNull: false
   },
-  doctorId: { 
-    type: DataTypes.STRING, 
+  doctorId: {
+    type: DataTypes.STRING,
     allowNull: false
   },
-  departmentId: { 
-    type: DataTypes.STRING, 
+  departmentId: {
+    type: DataTypes.STRING,
     allowNull: false
   },
-  fee: { 
-    type: DataTypes.FLOAT, 
+  fee: {
+    type: DataTypes.FLOAT,
     allowNull: false
   }
 });
@@ -146,11 +142,11 @@ async function initDatabase() {
     // 测试数据库连接
     await sequelize.authenticate();
     console.log('数据库连接成功');
-    
+
     // 同步所有模型到数据库
     await sequelize.sync();
     console.log('数据库表同步完成');
-    
+
     // 检查科室表是否为空
     const deptCount = await Department.count();
     if (deptCount === 0) {
@@ -162,7 +158,7 @@ async function initDatabase() {
         "儿科", "新生儿科", "眼科", "耳鼻喉科", "口腔科",
         "皮肤科", "风湿免疫科", "急诊科"
       ];
-      
+
       for (const deptName of departmentList) {
         await Department.create({
           departmentId: deptName,
@@ -171,7 +167,7 @@ async function initDatabase() {
       }
       console.log('科室数据初始化完成');
     }
-    
+
     // 检查管理员表是否为空
     const adminCount = await Admin.count();
     if (adminCount === 0) {
@@ -183,7 +179,7 @@ async function initDatabase() {
       });
       console.log('管理员账号初始化完成');
     }
-    
+
     console.log('数据库初始化完成');
   } catch (error) {
     console.error('数据库初始化失败:', error);

@@ -4,7 +4,7 @@ const { checkAdminLogin, changeAdminPassword } = require('./services/authService
 const { registerPatient, cancelRegistration } = require('./services/registrationService');
 const { queryRegistrations, getPatientRegistrations, getDoctorRegistrations } = require('./services/queryService');
 const { getDoctors, getDoctorById, createDoctor, updateDoctor, deleteDoctor, updateSchedule } = require('./services/doctorService');
-const { Department } = require('./database/database');
+const { Department, Patient } = require('./database/database');
 
 let mainWindow;
 
@@ -97,6 +97,16 @@ app.whenReady().then(() => {
 
   ipcMain.handle('get-doctor-registrations', async (event, doctorId, date) => {
     return getDoctorRegistrations(doctorId, date);
+  });
+
+  // 新增：获取患者信息
+  ipcMain.handle('get-patient-by-id', async (event, idCard) => {
+    try {
+      const patient = await Patient.findByPk(idCard);
+      return patient ? patient.toJSON() : null;
+    } catch (e) {
+      return null;
+    }
   });
 
   app.on('activate', () => {
