@@ -31,14 +31,7 @@ async function getDoctors(departmentId = null) {
   try {
     console.log('获取医生列表, 科室:', departmentId);
     const where = departmentId ? { departmentId } : {};
-
-    // 检查医生表是否为空
-    const count = await Doctor.count();
-    if (count === 0) {
-      console.log('医生表为空，返回空数组');
-      return [];
-    }
-
+    
     const doctors = await Doctor.findAll({
       where,
       include: [{
@@ -46,27 +39,25 @@ async function getDoctors(departmentId = null) {
         attributes: ['name']
       }]
     });
-
+    
     // 格式化返回数据
     const formattedDoctors = doctors.map(doc => {
       const doctorData = doc.get({ plain: true });
       return {
+        id: doctorData.id,
         doctorId: doctorData.doctorId,
         name: doctorData.name,
         title: doctorData.title,
         departmentId: doctorData.departmentId,
-        workTime: doctorData.workTime,
         remain: doctorData.remain,
         bio: doctorData.bio,
         schedule: doctorData.schedule,
         Department: doctorData.Department ? {
           name: doctorData.Department.name
-        } : null,
-        workTime: getWorkTimeString(doctorData.schedule || '')
+        } : null
       };
     });
-
-    console.log('获取到的医生数据:', JSON.stringify(formattedDoctors, null, 2));
+    
     return formattedDoctors;
   } catch (error) {
     console.error('获取医生列表失败:', error);
